@@ -4,52 +4,60 @@ import numpy as np
 import os
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.decomposition import PCA
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.metrics import accuracy_score, classification_report
 
 def main():
-    print("--- Running Classical SVM on General Disease Dataset ---")
+    print("--- Running Classical Multi-Disease SVM ---")
     
-    # Use the local synthetic dataset
-    df = pd.read_csv('data/qnose_synthetic_dataset.csv')
+    # Use the new multi-disease local dataset
+    df = pd.read_csv('data/VOC_MultiDisease_Dataset.csv')
     
-    # Target: is_diseased (0 = Healthy, 1 = Diseased)
-    y = df['is_diseased'].values
+    # Ensure there are no unname columns causing issues, just use the exact VOCs
+    target_col = 'Disease Label'
     
-    # Features: Pick only the ppb and ppm sensory data
-    feature_cols = [c for c in df.columns if c.endswith('_ppb') or c.endswith('_ppm')]
+    # Filter out text columns and IDs
+    exclude_keywords = ['id', 'label']
+    feature_cols = [c for c in df.columns if not any(x in c.lower() for x in exclude_keywords) and df[c].dtype in [np.float64, np.int64]]
     X = df[feature_cols]
     
-    # Compute the average healthy profile to use in the UI later
-    healthy_mean = df[df['is_diseased'] == 0][feature_cols].mean().values
+    # Map the disease strings to integers
+    le = LabelEncoder()
+    y = le.fit_transform(df[target_col])
+    joblib.dump(le, 'label_encoder.pkl')
+    
+    # Calculate healthy mean for the dashboard
+    if 'Healthy' in le.classes_:
+        healthy_val = le.transform(['Healthy'])[0]
+        healthy_mean = df[df[target_col] == 'Healthy'][feature_cols].mean().values
+    else:
+        # fallback
+        healthy_mean = X.mean().values
+    
     joblib.dump(healthy_mean, 'healthy_mean.pkl')
-    
-    # Save feature names
     joblib.dump(feature_cols, 'feature_cols.pkl')
+    joblib.dump(X.mean().values, 'x_mean.pkl')
     
-    # Better to use StandardScaler for general biological VOCs
+    # Standardize
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
     joblib.dump(scaler, 'scaler.pkl')
     
-    # Save the global mean for padding
-    joblib.dump(X.mean().values, 'x_mean.pkl')
-    
-    # PCA down to 5 components for the 5-qubit quantum embedding
+    # PCA to 5 dimensions for the 5-qubit architecture
     pca = PCA(n_components=5)
     X_pca = pca.fit_transform(X_scaled)
     joblib.dump(pca, 'pca.pkl')
     
+    # Stratified Split
     X_train, X_test, y_train, y_test = train_test_split(X_pca, y, test_size=0.3, random_state=42, stratify=y)
     
-    svm = SVC(kernel='rbf', probability=True)
+    svm = SVC(kernel='rbf', probability=True, break_ties=True)
     svm.fit(X_train, y_train)
     y_pred = svm.predict(X_test)
     
-    print(f"Accuracy: {accuracy_score(y_test, y_pred):.4f}")
-    print("\nClassification Report:")
-    print(classification_report(y_test, y_pred))
+    print(f"Classical Accuracy: {accuracy_score(y_test, y_pred):.4f}")
+    print(f"Total evaluated classes: {len(le.classes_)}")
 
     joblib.dump(svm, 'classical_svm_model.pkl')
     np.save('y_test_classical.npy', y_test)
