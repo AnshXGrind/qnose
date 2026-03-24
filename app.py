@@ -52,6 +52,11 @@ st.markdown("""
         border: 2px solid #00cc66;
         text-align: center;
     }
+    .hw-button button {
+        background-color: #4B0082 !important;
+        color: white !important;
+        border: 2px solid #9b59b6 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -76,33 +81,63 @@ def load_resources():
 
 scaler, pca, x_mean, healthy_mean, qsvm, X_train, y_train, feature_cols, le = load_resources()
 
-# The Top 5 VOC markers identified in EDA: Ethane, Nonanal, Acetonitrile, Pentane, Hexanal
-idx_ethane = feature_cols.index('Ethane')
-idx_nonanal = feature_cols.index('Nonanal')
-idx_acetonitrile = feature_cols.index('Acetonitrile')
-idx_pentane = feature_cols.index('Pentane')
-idx_hexanal = feature_cols.index('Hexanal')
+# Expanded Top 10 VOC markers identified in EDA
+top_features = [
+    "Ethane", "Nonanal", "Acetonitrile", "Pentane", "Hexanal", 
+    "Isoprene", "Trimethylamine", "Propanal", "Ammonia", "Toluene"
+]
+indices = {feat: feature_cols.index(feat) for feat in top_features}
 
-# 4. Sidebar Controls
+# 4. Hardware Sync Logic
+def sync_hardware():
+    # Simulates an IoT breathalyzer reading via Bluetooth/Serial
+    for feat in top_features:
+        idx = indices[feat]
+        base_val = float(healthy_mean[idx])
+        # Add realistic randomized noise spiking to simulate disease signals
+        st.session_state[f"hw_{feat}"] = max(0.0, float(np.random.normal(base_val * 1.5, base_val * 0.8)))
+    st.session_state.hw_synced = True
+
+if "hw_synced" not in st.session_state:
+    st.session_state.hw_synced = False
+    for feat in top_features:
+        st.session_state[f"hw_{feat}"] = float(healthy_mean[indices[feat]])
+
+# 5. Sidebar Controls
 with st.sidebar:
     st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/P_hybrid_circuit.svg/1024px-P_hybrid_circuit.svg.png")
     st.header("🎛️ Clinical Breath Inputs")
-    st.markdown("Adjust key Top-5 predictive VOC parts-per-billion (ppb) detected.")
     
-    ethane = st.slider("Ethane (ppb) [Top Indicator]", 0.0, 50.0, float(healthy_mean[idx_ethane]), step=0.1)
-    nonanal = st.slider("Nonanal (ppb)", 0.0, 50.0, float(healthy_mean[idx_nonanal]), step=0.1)
-    acetonitrile = st.slider("Acetonitrile (ppb)", 0.0, 50.0, float(healthy_mean[idx_acetonitrile]), step=0.1)
-    pentane = st.slider("Pentane (ppb) [Oxidative Stress]", 0.0, 200.0, float(healthy_mean[idx_pentane]), step=1.0)
-    hexanal = st.slider("Hexanal (ppb)", 0.0, 50.0, float(healthy_mean[idx_hexanal]), step=0.1)
+    st.markdown('<div class="hw-button">', unsafe_allow_html=True)
+    if st.button("📡 Auto-Detect from Hardware", on_click=sync_hardware, use_container_width=True):
+        st.toast("Breathalyzer hardware sync successful!", icon="✅")
+    st.markdown('</div>', unsafe_allow_html=True)
     
+    st.markdown("---")
+    st.markdown("Adjust key Top-10 predictive VOC parts-per-billion (ppb).")
+    
+    ui_features = []
+    
+    # Render Sliders mapping to session state
+    val_ethane = st.slider("Ethane (ppb) [Top Indicator]", 0.0, 100.0, st.session_state["hw_Ethane"], step=0.1, key="sl_ethane")
+    val_nonanal = st.slider("Nonanal (ppb)", 0.0, 100.0, st.session_state["hw_Nonanal"], step=0.1, key="sl_nonanal")
+    val_aceto = st.slider("Acetonitrile (ppb)", 0.0, 100.0, st.session_state["hw_Acetonitrile"], step=0.1, key="sl_aceto")
+    val_pentane = st.slider("Pentane (ppb) [Oxidative Stress]", 0.0, 300.0, st.session_state["hw_Pentane"], step=1.0, key="sl_pentane")
+    val_hexanal = st.slider("Hexanal (ppb)", 0.0, 100.0, st.session_state["hw_Hexanal"], step=0.1, key="sl_hexanal")
+    val_isoprene = st.slider("Isoprene (ppb)", 0.0, 100.0, st.session_state["hw_Isoprene"], step=0.1, key="sl_iso")
+    val_trimeth = st.slider("Trimethylamine (ppb)", 0.0, 100.0, st.session_state["hw_Trimethylamine"], step=0.1, key="sl_tri")
+    val_propanal = st.slider("Propanal (ppb)", 0.0, 100.0, st.session_state["hw_Propanal"], step=0.1, key="sl_prop")
+    val_ammonia = st.slider("Ammonia (ppb)", 0.0, 1500.0, st.session_state["hw_Ammonia"], step=1.0, key="sl_amm")
+    val_toluene = st.slider("Toluene (ppb)", 0.0, 100.0, st.session_state["hw_Toluene"], step=0.1, key="sl_tol")
+    
+    current_ui_vars = [val_ethane, val_nonanal, val_aceto, val_pentane, val_hexanal, val_isoprene, val_trimeth, val_propanal, val_ammonia, val_toluene]
+
     st.markdown("<br>", unsafe_allow_html=True)
-    predict_button = st.button("🧬 Run Quantum Multi-Class Inference", type="primary")
+    predict_button = st.button("🧬 Run Quantum Inference Array", type="primary", use_container_width=True)
 
-ui_feature_names = ["Ethane", "Nonanal", "Acetonitrile", "Pentane", "Hexanal"]
-ui_features = [ethane, nonanal, acetonitrile, pentane, hexanal]
-healthy_base = [healthy_mean[idx_ethane], healthy_mean[idx_nonanal], healthy_mean[idx_acetonitrile], healthy_mean[idx_pentane], healthy_mean[idx_hexanal]]
+healthy_base = [float(healthy_mean[indices[f]]) for f in top_features]
 
-# 5. Quantum Circuit Setup
+# 6. Quantum Circuit Setup
 n_qubits = 5
 dev = qml.device("default.qubit", wires=n_qubits)
 
@@ -115,7 +150,7 @@ def kernel_circuit(x1, x2):
 def kernel_function(x1, x2):
     return kernel_circuit(x1, x2)[0]
 
-# 6. Dashboard Layout
+# 7. Dashboard Layout
 col1, col2, col3 = st.columns([1, 1.2, 1.5], gap="large")
 
 if 'prediction_run' not in st.session_state:
@@ -126,17 +161,15 @@ if 'prediction_run' not in st.session_state:
 
 if predict_button:
     full_features = np.copy(x_mean)
-    full_features[idx_ethane] = ethane
-    full_features[idx_nonanal] = nonanal
-    full_features[idx_acetonitrile] = acetonitrile
-    full_features[idx_pentane] = pentane
-    full_features[idx_hexanal] = hexanal
+    # Map the UI features dynamically to the array
+    for i, feat in enumerate(top_features):
+        full_features[indices[feat]] = current_ui_vars[i]
     
     X_input_scaled = scaler.transform([full_features])
     X_input_pca = pca.transform(X_input_scaled)
     st.session_state.X_input_pca = X_input_pca
     
-    progress_text = "⚛️ Calculating entangled multiclass permutations in Quantum Model..."
+    progress_text = "⚛️ Aligning data payload to Hilbert Space mapping..."
     my_bar = st.progress(0, text=progress_text)
     for percent_complete in range(100):
         time.sleep(0.005)
@@ -154,11 +187,11 @@ if predict_button:
     st.session_state.prediction_run = True
 
 with col1:
-    st.subheader("🔬 Biomarker Top-5 Profile")
+    st.subheader("🔬 Profile Topography")
     df_radar = pd.DataFrame({
-        'Feature': ui_feature_names * 2,
-        'Value': ui_features + healthy_base,
-        'Group': ['Patient Sample'] * 5 + ['Healthy Baseline'] * 5
+        'Feature': top_features * 2,
+        'Value': current_ui_vars + healthy_base,
+        'Group': ['Patient Sample'] * 10 + ['Healthy Baseline'] * 10
     })
     
     fig_radar = px.line_polar(df_radar, r='Value', theta='Feature', color='Group', line_close=True,
@@ -171,14 +204,17 @@ with col2:
     st.subheader("⚠️ Top Diagnostic Matches")
     
     if not st.session_state.prediction_run:
-        st.info("Awaiting input. Click **Run Inference** to predict across 27 classifications.")
+        st.info("Awaiting input. Click **Run Inference** to map classifications.")
     else:
-        # Multiclass probability breakdown
+        # Multiclass probability breakdown error FIX: map against actual qsvm classes
         if st.session_state.prob_dist is not None:
-            # Sort top 5 diseases
             probs = st.session_state.prob_dist
+            # Indices of the top 5 probabilities
             top_5_idx = np.argsort(probs)[-5:][::-1]
-            top_5_diseases = le.inverse_transform(top_5_idx)
+            
+            # Use qsvm.classes_ to map array probability index to actual encoded label integer
+            actual_encoded_labels = qsvm.classes_[top_5_idx]
+            top_5_diseases = le.inverse_transform(actual_encoded_labels)
             top_5_probs = probs[top_5_idx] * 100
             
             df_probs = pd.DataFrame({'Disease': top_5_diseases, 'Probability': top_5_probs})
@@ -188,14 +224,14 @@ with col2:
             st.plotly_chart(fig_bar)
             
         if st.session_state.pred_label != "Healthy":
-            st.markdown(f'<div class="alert-glow"><h3>🚨 {st.session_state.pred_label} Detected</h3><p>Highest correlation across the 27-state diagnostic matrix.</p></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="alert-glow"><h3>🚨 {st.session_state.pred_label} Detected</h3><p>Highest structural correlation in local phase space.</p></div>', unsafe_allow_html=True)
         else:
-            st.markdown('<div class="safe-glow"><h3>✅ Baseline Healthy</h3><p>Biomarkers correspond natively to regular background topology.</p></div>', unsafe_allow_html=True)
+            st.markdown('<div class="safe-glow"><h3>✅ Baseline Healthy</h3><p>Biomarkers correspond natively to background topology.</p></div>', unsafe_allow_html=True)
 
 with col3:
-    st.subheader("🌐 3D Multiplex Topography")
+    st.subheader("🌐 3D Multiplex Array")
     if not st.session_state.prediction_run:
-        st.info("Awaiting structural mapping of the local dimensional feature space.")
+        st.info("Awaiting structural dimensional space map.")
     else:
         df_3d = pd.DataFrame({
             'PCA 1': X_train[:, 0],
@@ -235,32 +271,34 @@ with col3:
 
 st.markdown("---")
 
-tab1, tab2 = st.tabs(["🗺️ Quantum Processing Arrays", "🧠 Multiclass Explainability"])
+tab1, tab2 = st.tabs(["🗺️ Quantum Processing Benchmarks", "🧠 Multiclass Explainability"])
 
 with tab1:
     st.markdown("### ⚛️ Architecture Core")
     
     cq1, cq2, cq3 = st.columns(3)
     with cq1:
-        st.markdown("**1. Kernel Alignment Map**")
+        st.markdown("**1. Multiclass Simulation Comparison**")
+        if os.path.exists("model_comparison.png"):
+            st.image("model_comparison.png")
+            
+    with cq2:
+        st.markdown("**2. Kernel Structural Matrix Map**")
         if os.path.exists("kernel_alignment.png"):
             st.image("kernel_alignment.png")
             
-    with cq2:
-        st.markdown("**2. Quantum Sensitivity Gradients**")
-        if os.path.exists("quantum_feature_importance.png"):
-            st.image("quantum_feature_importance.png")
-            
     with cq3:
-        st.markdown("**3. Stratified Subspace Projection**")
+        st.markdown("**3. Stratified Subspace Layout**")
         if os.path.exists("quantum_tsne_projection.png"):
             st.image("quantum_tsne_projection.png")
             
     st.markdown("---")
-    st.markdown("### Topological Data Encoding (OVR Multiclass Configuration)")
+    st.markdown("### Topological Dimensional Architecture")
     if os.path.exists("quantum_circuit.png"):
         st.image("quantum_circuit.png")
 
 with tab2:
-    st.markdown("### Structural Matrix View")
-    st.info("Multiclass SHAP visualization pipeline is currently caching... View `feature_importances.csv` generated by the Random Forest array for top indicators.")
+    st.markdown("### Gradient Extraction")
+    if os.path.exists("quantum_feature_importance.png"):
+        st.image("quantum_feature_importance.png")
+    st.info("Additional multiclass SHAP pipeline metrics are located in the `eda_results` repository folder.")
