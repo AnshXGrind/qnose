@@ -72,6 +72,7 @@ def main():
     
     joblib.dump(qsvm, 'quantum_svm_model.pkl')
     np.save('X_train_qsvm.npy', X_train)
+    np.save('y_train_qsvm.npy', y_train)
     np.save('y_pred_quantum.npy', y_pred)
     np.save('y_test_quantum.npy', y_test)
 
