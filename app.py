@@ -57,11 +57,22 @@ st.markdown("""
         color: white !important;
         border: 2px solid #9b59b6 !important;
     }
+    .hw-error {
+        color: #ff4b4b;
+        font-weight: bold;
+        background-color: rgba(255, 75, 75, 0.1);
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid #ff4b4b;
+        text-align: center;
+        margin-top: 10px;
+        margin-bottom: 10px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # 2. Main Title and Header
-st.title("⚛️ QNose — Quantum 27-Disease Diagnostic Array")
+st.title("⚛️ QNose — Quantum Multiclass Engine")
 st.markdown("##### *Next-Gen Multi-Disease Early Detection mapped across 27 distinct classes using Quantum Phase Spaces*")
 st.markdown("---")
 
@@ -81,63 +92,72 @@ def load_resources():
 
 scaler, pca, x_mean, healthy_mean, qsvm, X_train, y_train, feature_cols, le = load_resources()
 
-# Expanded Top 10 VOC markers identified in EDA
-top_features = [
-    "Ethane", "Nonanal", "Acetonitrile", "Pentane", "Hexanal", 
-    "Isoprene", "Trimethylamine", "Propanal", "Ammonia", "Toluene"
-]
-indices = {feat: feature_cols.index(feat) for feat in top_features}
+# 4. Sidebar Controls and Logic
+if "hw_error_triggered" not in st.session_state:
+    st.session_state.hw_error_triggered = False
 
-# 4. Hardware Sync Logic
-def sync_hardware():
-    # Simulates an IoT breathalyzer reading via Bluetooth/Serial
-    for feat in top_features:
-        idx = indices[feat]
-        base_val = float(healthy_mean[idx])
-        # Add realistic randomized noise spiking to simulate disease signals
-        st.session_state[f"hw_{feat}"] = max(0.0, float(np.random.normal(base_val * 1.5, base_val * 0.8)))
-    st.session_state.hw_synced = True
+def trigger_hw_error():
+    st.session_state.hw_error_triggered = True
 
-if "hw_synced" not in st.session_state:
-    st.session_state.hw_synced = False
-    for feat in top_features:
-        st.session_state[f"hw_{feat}"] = float(healthy_mean[indices[feat]])
-
-# 5. Sidebar Controls
 with st.sidebar:
     st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/P_hybrid_circuit.svg/1024px-P_hybrid_circuit.svg.png")
-    st.header("🎛️ Clinical Breath Inputs")
     
+    # 4A. Hardware Input
+    st.header("🎛️ Data Source")
     st.markdown('<div class="hw-button">', unsafe_allow_html=True)
-    if st.button("📡 Auto-Detect from Hardware", on_click=sync_hardware, use_container_width=True):
-        st.toast("Breathalyzer hardware sync successful!", icon="✅")
+    st.button("📡 Auto-Detect from Hardware", on_click=trigger_hw_error, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
     
+    if st.session_state.hw_error_triggered:
+        st.markdown('<div class="hw-error">🚨 Hardware interface not found! <br> No IoT Breathalyzer detected on open serial/bluetooth ports. Entering Manual Override.</div>', unsafe_allow_html=True)
+    
     st.markdown("---")
-    st.markdown("Adjust key Top-10 predictive VOC parts-per-billion (ppb).")
+    st.header("🧪 Manual Override Array")
     
-    ui_features = []
+    # 4B. User Selection Modes
+    input_mode = st.radio("Select VOC Input Mode:", ["Top 5 VOCs", "Top 10 VOCs", "Custom / All VOCs"])
     
-    # Render Sliders mapping to session state
-    val_ethane = st.slider("Ethane (ppb) [Top Indicator]", 0.0, 100.0, st.session_state["hw_Ethane"], step=0.1, key="sl_ethane")
-    val_nonanal = st.slider("Nonanal (ppb)", 0.0, 100.0, st.session_state["hw_Nonanal"], step=0.1, key="sl_nonanal")
-    val_aceto = st.slider("Acetonitrile (ppb)", 0.0, 100.0, st.session_state["hw_Acetonitrile"], step=0.1, key="sl_aceto")
-    val_pentane = st.slider("Pentane (ppb) [Oxidative Stress]", 0.0, 300.0, st.session_state["hw_Pentane"], step=1.0, key="sl_pentane")
-    val_hexanal = st.slider("Hexanal (ppb)", 0.0, 100.0, st.session_state["hw_Hexanal"], step=0.1, key="sl_hexanal")
-    val_isoprene = st.slider("Isoprene (ppb)", 0.0, 100.0, st.session_state["hw_Isoprene"], step=0.1, key="sl_iso")
-    val_trimeth = st.slider("Trimethylamine (ppb)", 0.0, 100.0, st.session_state["hw_Trimethylamine"], step=0.1, key="sl_tri")
-    val_propanal = st.slider("Propanal (ppb)", 0.0, 100.0, st.session_state["hw_Propanal"], step=0.1, key="sl_prop")
-    val_ammonia = st.slider("Ammonia (ppb)", 0.0, 1500.0, st.session_state["hw_Ammonia"], step=1.0, key="sl_amm")
-    val_toluene = st.slider("Toluene (ppb)", 0.0, 100.0, st.session_state["hw_Toluene"], step=0.1, key="sl_tol")
+    top_5 = ["Ethane", "Nonanal", "Acetonitrile", "Pentane", "Hexanal"]
+    top_10 = top_5 + ["Isoprene", "Trimethylamine", "Propanal", "Ammonia", "Toluene"]
     
-    current_ui_vars = [val_ethane, val_nonanal, val_aceto, val_pentane, val_hexanal, val_isoprene, val_trimeth, val_propanal, val_ammonia, val_toluene]
+    active_features = []
+    
+    if input_mode == "Top 5 VOCs":
+        st.caption("Using the top 5 predictive biomarkers for standard accuracy.")
+        active_features = top_5
+    elif input_mode == "Top 10 VOCs":
+        st.caption("Expanded array into 10 key biochemical vectors for robust predictions.")
+        active_features = top_10
+    else:
+        st.caption("Maximum Accuracy: Select partial elements or inject the entire 26-vector array.")
+        select_all = st.checkbox("Select All VOCs (Max Accuracy Mode)", value=True)
+        if select_all:
+            active_features = feature_cols
+        else:
+            active_features = st.multiselect("Select Exact VOCs to input:", feature_cols, default=top_10)
+
+    # 4C. Dynamic Sliders
+    st.markdown(f"**Adjusting {len(active_features)} active parameters**")
+    ui_vars = {}
+    
+    for feat in active_features:
+        idx = feature_cols.index(feat)
+        default_val = float(healthy_mean[idx])
+        # Ensure scale makes sense
+        scale_multip = 3.0 if default_val > 10 else 10.0
+        max_val = max(100.0, default_val * scale_multip)
+        if feat in ["Pentane", "Ammonia"]:
+            max_val = max(1500.0, max_val)
+            
+        ui_vars[feat] = st.slider(f"{feat} (ppb)", 0.0, float(max_val), float(default_val), step=0.1, key=f"sl_{feat}")
 
     st.markdown("<br>", unsafe_allow_html=True)
     predict_button = st.button("🧬 Run Quantum Inference Array", type="primary", use_container_width=True)
 
-healthy_base = [float(healthy_mean[indices[f]]) for f in top_features]
+healthy_base = [float(healthy_mean[feature_cols.index(f)]) for f in active_features]
+current_vars = [ui_vars[f] for f in active_features]
 
-# 6. Quantum Circuit Setup
+# 5. Quantum Circuit Setup
 n_qubits = 5
 dev = qml.device("default.qubit", wires=n_qubits)
 
@@ -150,7 +170,7 @@ def kernel_circuit(x1, x2):
 def kernel_function(x1, x2):
     return kernel_circuit(x1, x2)[0]
 
-# 7. Dashboard Layout
+# 6. Dashboard Layout
 col1, col2, col3 = st.columns([1, 1.2, 1.5], gap="large")
 
 if 'prediction_run' not in st.session_state:
@@ -160,16 +180,17 @@ if 'prediction_run' not in st.session_state:
     st.session_state.X_input_pca = None
 
 if predict_button:
+    # Baseline everything against standard means, then overwrite with active inputs
     full_features = np.copy(x_mean)
-    # Map the UI features dynamically to the array
-    for i, feat in enumerate(top_features):
-        full_features[indices[feat]] = current_ui_vars[i]
+    for feat in active_features:
+        full_features[feature_cols.index(feat)] = ui_vars[feat]
     
     X_input_scaled = scaler.transform([full_features])
     X_input_pca = pca.transform(X_input_scaled)
     st.session_state.X_input_pca = X_input_pca
     
-    progress_text = "⚛️ Aligning data payload to Hilbert Space mapping..."
+    # Progress visualization
+    progress_text = "⚛️ Collapsing Quantum Matrix against active VOC features..."
     my_bar = st.progress(0, text=progress_text)
     for percent_complete in range(100):
         time.sleep(0.005)
@@ -187,32 +208,33 @@ if predict_button:
     st.session_state.prediction_run = True
 
 with col1:
-    st.subheader("🔬 Profile Topography")
-    df_radar = pd.DataFrame({
-        'Feature': top_features * 2,
-        'Value': current_ui_vars + healthy_base,
-        'Group': ['Patient Sample'] * 10 + ['Healthy Baseline'] * 10
-    })
-    
-    fig_radar = px.line_polar(df_radar, r='Value', theta='Feature', color='Group', line_close=True,
-                              color_discrete_sequence=['#ff4b4b', '#1f77b4'],
-                              template="plotly_dark" if st.get_option("theme.base") == "dark" else "plotly_white")
-    fig_radar.update_layout(polar=dict(radialaxis=dict(visible=False)), margin=dict(t=20, b=20, l=20, r=20), height=350)
-    st.plotly_chart(fig_radar)
+    st.subheader("🔬 Biomarker Topography")
+    if len(active_features) > 2:
+        df_radar = pd.DataFrame({
+            'Feature': active_features * 2,
+            'Value': current_vars + healthy_base,
+            'Group': ['Patient Sample'] * len(active_features) + ['Healthy Baseline'] * len(active_features)
+        })
+        
+        fig_radar = px.line_polar(df_radar, r='Value', theta='Feature', color='Group', line_close=True,
+                                  color_discrete_sequence=['#ff4b4b', '#1f77b4'],
+                                  template="plotly_dark" if st.get_option("theme.base") == "dark" else "plotly_white")
+        # Turn off radar axes ticks for cleaner look if > 10 features
+        show_ticks = len(active_features) <= 10
+        fig_radar.update_layout(polar=dict(radialaxis=dict(visible=False), angularaxis=dict(showticklabels=show_ticks)), 
+                                margin=dict(t=20, b=20, l=20, r=20), height=350)
+        st.plotly_chart(fig_radar, use_container_width=True)
+    else:
+        st.info("Select at least 3 VOCs to generate array topology.")
 
 with col2:
-    st.subheader("⚠️ Top Diagnostic Matches")
-    
+    st.subheader("⚠️ Diagnostic Mapping")
     if not st.session_state.prediction_run:
-        st.info("Awaiting input. Click **Run Inference** to map classifications.")
+        st.info("Awaiting input. Select inputs and click **Run Inference** to map predictions.")
     else:
-        # Multiclass probability breakdown error FIX: map against actual qsvm classes
         if st.session_state.prob_dist is not None:
             probs = st.session_state.prob_dist
-            # Indices of the top 5 probabilities
             top_5_idx = np.argsort(probs)[-5:][::-1]
-            
-            # Use qsvm.classes_ to map array probability index to actual encoded label integer
             actual_encoded_labels = qsvm.classes_[top_5_idx]
             top_5_diseases = le.inverse_transform(actual_encoded_labels)
             top_5_probs = probs[top_5_idx] * 100
@@ -221,7 +243,7 @@ with col2:
             fig_bar = px.bar(df_probs, x='Probability', y='Disease', orientation='h', color='Probability', 
                              color_continuous_scale='Reds' if st.session_state.pred_label != "Healthy" else 'Greens')
             fig_bar.update_layout(yaxis={'categoryorder':'total ascending'}, margin=dict(t=10, b=10, l=10, r=10), height=200, coloraxis_showscale=False)
-            st.plotly_chart(fig_bar)
+            st.plotly_chart(fig_bar, use_container_width=True)
             
         if st.session_state.pred_label != "Healthy":
             st.markdown(f'<div class="alert-glow"><h3>🚨 {st.session_state.pred_label} Detected</h3><p>Highest structural correlation in local phase space.</p></div>', unsafe_allow_html=True)
@@ -229,7 +251,7 @@ with col2:
             st.markdown('<div class="safe-glow"><h3>✅ Baseline Healthy</h3><p>Biomarkers correspond natively to background topology.</p></div>', unsafe_allow_html=True)
 
 with col3:
-    st.subheader("🌐 3D Multiplex Array")
+    st.subheader("🌐 3D Multiplex Hologram")
     if not st.session_state.prediction_run:
         st.info("Awaiting structural dimensional space map.")
     else:
@@ -237,37 +259,62 @@ with col3:
             'PCA 1': X_train[:, 0],
             'PCA 2': X_train[:, 1],
             'PCA 3': X_train[:, 2],
-            'Class': le.inverse_transform(y_train),
-            'Size': [3] * len(X_train)
+            'Class': le.inverse_transform(y_train)
         })
         
-        patient_data = pd.DataFrame({
-            'PCA 1': [st.session_state.X_input_pca[0, 0]],
-            'PCA 2': [st.session_state.X_input_pca[0, 1]],
-            'PCA 3': [st.session_state.X_input_pca[0, 2]],
-            'Class': ['⭐ CURRENT PATIENT'],
-            'Size': [30]
-        })
+        # Build holographic scatter plot using Graph Objects for complete control
+        fig_3d = go.Figure()
         
-        df_plot = pd.concat([df_3d, patient_data], ignore_index=True)
+        classes = df_3d['Class'].unique()
+        import plotly.colors as pcolors
+        colors = pcolors.qualitative.Alphabet
         
-        fig_3d = px.scatter_3d(
-            df_plot, x='PCA 1', y='PCA 2', z='PCA 3', 
-            color='Class', size='Size',
-            opacity=0.75
-        )
+        # Plot background disease clouds
+        for i, cls in enumerate(classes):
+            cls_data = df_3d[df_3d['Class'] == cls]
+            fig_3d.add_trace(go.Scatter3d(
+                x=cls_data['PCA 1'], y=cls_data['PCA 2'], z=cls_data['PCA 3'],
+                mode='markers',
+                marker=dict(size=4, color=colors[i % len(colors)], opacity=0.4),
+                name=cls, showlegend=False,
+                hoverinfo='text',
+                text=cls_data['Class']
+            ))
+            
+        # Plot the patient
+        fig_3d.add_trace(go.Scatter3d(
+            x=[st.session_state.X_input_pca[0, 0]], 
+            y=[st.session_state.X_input_pca[0, 1]], 
+            z=[st.session_state.X_input_pca[0, 2]],
+            mode='markers+text',
+            marker=dict(size=14, color='#00FF00', symbol='diamond', 
+                        line=dict(width=2, color='white'), opacity=1.0),
+            name='TARGET',
+            text=['⭐ TARGET'],
+            textposition="top center",
+            textfont=dict(color='#00FF00', size=16, family="Arial Black"),
+            showlegend=False,
+            hoverinfo='text'
+        ))
         
         fig_3d.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
             scene=dict(
-                xaxis=dict(showbackground=False),
-                yaxis=dict(showbackground=False),
-                zaxis=dict(showbackground=False)
+                xaxis=dict(showgrid=False, showbackground=False, zeroline=False, visible=False),
+                yaxis=dict(showgrid=False, showbackground=False, zeroline=False, visible=False),
+                zaxis=dict(showgrid=False, showbackground=False, zeroline=False, visible=False),
+                bgcolor='rgba(0,0,0,0)'
             ),
             margin=dict(t=0, b=0, l=0, r=0),
-            height=380,
-            showlegend=False
+            height=450,
+            scene_camera=dict(
+                up=dict(x=0, y=0, z=1),
+                center=dict(x=0, y=0, z=0),
+                eye=dict(x=1.3, y=1.3, z=1.3)
+            )
         )
-        st.plotly_chart(fig_3d)
+        st.plotly_chart(fig_3d, use_container_width=True)
 
 st.markdown("---")
 
@@ -301,4 +348,4 @@ with tab2:
     st.markdown("### Gradient Extraction")
     if os.path.exists("quantum_feature_importance.png"):
         st.image("quantum_feature_importance.png")
-    st.info("Additional multiclass SHAP pipeline metrics are located in the `eda_results` repository folder.")
+    st.info("Additional multiclass pipeline metrics are located in the `eda_results` repository folder.")
