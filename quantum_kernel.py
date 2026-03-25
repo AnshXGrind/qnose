@@ -33,7 +33,7 @@ def main():
     X_train_full, X_test_full, y_train_full, y_test_full = train_test_split(X_pca, y, test_size=0.3, random_state=42, stratify=y)
 
     n_qubits = 5
-    dev = qml.device("default.qubit", wires=n_qubits)
+    dev = qml.device("lightning.qubit", wires=n_qubits)
 
     @qml.qnode(dev)
     def kernel_circuit(x1, x2):
@@ -52,10 +52,10 @@ def main():
     def kernel_function(x1, x2):
         return kernel_circuit(x1, x2)[0]
     
-    # Subsample carefully using stratified sampling for the small demo size
-    sample_size = 200
-    test_sample_size = 50
-    print(f"Subsampling training from {len(X_train_full)} to {sample_size} to execute Demo rapidly without supercomputer...")
+    # Use larger sample size with Lightning
+    sample_size = 500
+    test_sample_size = 100
+    print(f"Subsampling training from {len(X_train_full)} to {sample_size} with lightning.qubit...")
     
     # Using a stratified split again to ensure all 27 diseases have some examples 
     _, X_train, _, y_train = train_test_split(

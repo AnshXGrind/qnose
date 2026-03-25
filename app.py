@@ -164,6 +164,17 @@ with st.sidebar:
         st.markdown('<div class="hw-error">🚨 Hardware interface link failed!<br/>No IoT Breathalyzer detected on open serial/bluetooth ports.<br/><b>Manual override engaged.</b></div>', unsafe_allow_html=True)
     
     st.markdown("---")
+    st.header("📁 Upload Patient Data")
+    uploaded_file = st.file_uploader("Upload CSV of VOC Readings", type=["csv"])
+    if uploaded_file is not None:
+        try:
+            uploaded_df = pd.read_csv(uploaded_file)
+            st.success("CSV loaded successfully! Mapping features...")
+            st.session_state.uploaded_df = uploaded_df
+        except Exception as e:
+            st.error(f"Error parsing CSV: {e}")
+
+    st.markdown("---")
     st.header("🧪 Manual V.O.C. Injection")
     
     input_mode = st.radio("Select Active Matrix Format:", ["Top 5 Parameters", "Top 10 Parameters", "Full 26-Array Integration"])
@@ -190,6 +201,12 @@ with st.sidebar:
     for feat in active_features:
         idx = feature_cols.index(feat)
         default_val = float(healthy_mean[idx])
+        
+        # Override with uploaded data if available
+        if "uploaded_df" in st.session_state and st.session_state.uploaded_df is not None:
+            if feat in st.session_state.uploaded_df.columns:
+                default_val = float(st.session_state.uploaded_df[feat].iloc[0])
+                
         scale_multip = 3.0 if default_val > 10 else 10.0
         max_val = max(100.0, default_val * scale_multip)
         if feat in ["Pentane", "Ammonia"]:
@@ -254,7 +271,124 @@ if predict_button:
     st.session_state.patient_healthy_base = dict(zip(active_features, healthy_base))
 
 # 6. Main Content Area (Uncluttered Dashboard)
-col1, col2 = st.columns([1, 1.5], gap="large")
+# Swap columns or make the hologram full width. Let's make the hologram span the top, and put diagnostics below it, or use a better ratio.
+st.markdown("### 🌐 Navigable Holographic Projection")
+st.caption("A completely clean 3D render of the 27-state multi-disease boundary arrays.")
+
+if not st.session_state.get('prediction_run', False) and 'current_vars' in locals():
+    # Live 3D position
+    full_features = np.copy(x_mean)
+    for feat in active_features:
+        full_features[feature_cols.index(feat)] = ui_vars[feat]
+    live_scaled = scaler.transform([full_features])
+    live_pca = pca.transform(live_scaled)
+    
+    df_3d = pd.DataFrame({
+        'Phase X': X_train[:, 0], 'Phase Y': X_train[:, 1], 'Phase Z': X_train[:, 2],
+        'Class Mapping': le.inverse_transform(y_train)
+    })
+    patient_x = live_pca[0, 0]
+    patient_y = live_pca[0, 1]
+    patient_z = live_pca[0, 2]
+else:
+    df_3d = pd.DataFrame({
+        'Phase X': X_train[:, 0], 'Phase Y': X_train[:, 1], 'Phase Z': X_train[:, 2],
+        'Class Mapping': le.inverse_transform(y_train)
+    })
+    patient_x = st.session_state.X_input_pca[0, 0]
+    patient_y = st.session_state.X_input_pca[0, 1]
+    patient_z = st.session_state.X_input_pca[0, 2]
+
+# Clean HD Hologram Plot
+fig_3d = go.Figure()
+classes = df_3d['Class Mapping'].unique()
+import plotly.colors as pcolors
+colors = pcolors.qualitative.Alphabet
+
+for i, cls in enumerate(classes):
+    cls_data = df_3d[df_3d['Class Mapping'] == cls]
+    # Make background point sizes slightly larger and more visible
+    fig_3d.add_trace(go.Scatter3d(
+        x=cls_data['Phase X'], y=cls_data['Phase Y'], z=cls_data['Phase Z'],
+        mode='markers',
+        marker=dict(size=6, color=colors[i % len(colors)], opacity=0.5, line=dict(width=0.5, color='white')),
+        name=str(cls), showlegend=False,
+        hovertemplate=f"<b>{cls}</b><br>X: %{{x:.2f}}<br>Y: %{{y:.2f}}<br>Z: %{{z:.2f}}<extra></extra>"
+    ))
+    
+if patient_x is not None:
+    # Draw a scanner grid line dropping down from the anomoly
+    z_min = df_3d['Phase Z'].min() - 1
+    fig_3d.add_trace(go.Scatter3d(
+        x=[patient_x, patient_x], y=[patient_y, patient_y], z=[z_min, patient_z],
+        mode='lines',
+        line=dict(color='#FF00FF', width=5, dash='dash'),
+        showlegend=False, hoverinfo='none'
+    ))
+    
+    # Draw orthogonal lines to axes for clarity
+    fig_3d.add_trace(go.Scatter3d(
+        x=[patient_x, df_3d['Phase X'].min()], y=[patient_y, patient_y], z=[patient_z, patient_z],
+        mode='lines', line=dict(color='#00FFCC', width=2, dash='dot'), showlegend=False
+    ))
+    fig_3d.add_trace(go.Scatter3d(
+        x=[patient_x, patient_x], y=[patient_y, df_3d['Phase Y'].min()], z=[patient_z, patient_z],
+        mode='lines', line=dict(color='#00FFCC', width=2, dash='dot'), showlegend=False
+    ))
+    
+    fig_3d.add_trace(go.Scatter3d(
+        x=[patient_x], y=[patient_y], z=[patient_z],
+        mode='markers+text',
+        marker=dict(size=25, color='#FF00FF', symbol='diamond', line=dict(width=4, color='#00FFCC'), opacity=1.0),
+        name='SUBJECT', text=['🔴 LIVE TARGET ISO'], textposition="top center",
+        textfont=dict(color='#FF00FF', size=20, family="Courier New, monospace"), showlegend=False,
+        hovertemplate="<b>LIVE PATIENT</b><br>Phase X: %{x:.2f}<br>Phase Y: %{y:.2f}<br>Phase Z: %{z:.2f}<br><extra>🚨 ANOMALY ISO</extra>"
+    ))
+
+fig_3d.update_layout(
+    paper_bgcolor='rgba(0,0,0,0)',
+    plot_bgcolor='rgba(0,0,0,0)',
+    scene=dict(
+        aspectmode='cube',
+        xaxis=dict(showgrid=True, gridcolor='rgba(0, 255, 204, 0.4)', gridwidth=2, zeroline=True, zerolinecolor='#00FFCC', showbackground=True, backgroundcolor='rgba(15, 20, 35, 0.6)', title='Phase X'),
+        yaxis=dict(showgrid=True, gridcolor='rgba(0, 255, 204, 0.4)', gridwidth=2, zeroline=True, zerolinecolor='#00FFCC', showbackground=True, backgroundcolor='rgba(15, 20, 35, 0.6)', title='Phase Y'),
+        zaxis=dict(showgrid=True, gridcolor='rgba(176, 102, 255, 0.4)', gridwidth=2, zeroline=True, zerolinecolor='#B066FF', showbackground=True, backgroundcolor='rgba(15, 20, 35, 0.6)', title='Phase Z')
+    ),
+    margin=dict(t=50, b=0, l=0, r=0), height=750,
+    scene_camera=dict(
+        up=dict(x=0, y=0, z=1),
+        center=dict(x=0, y=0, z=0),
+        eye=dict(x=1.5, y=1.5, z=0.8)  # Better initial view
+    ),
+    updatemenus=[
+        dict(
+            type="buttons",
+            direction="right",
+            x=0.0, y=1.05,
+            showactive=True,
+            buttons=list([
+                dict(label="🎥 Cinematic View",
+                     method="relayout",
+                     args=[{"scene.camera": dict(eye=dict(x=1.5, y=1.5, z=0.8))}]),
+                dict(label="🛰️ Top-Down Array",
+                     method="relayout",
+                     args=[{"scene.camera": dict(eye=dict(x=0, y=0, z=2.5))}]),
+                dict(label="🔬 Orthogonal Scan",
+                     method="relayout",
+                     args=[{"scene.camera": dict(eye=dict(x=2.5, y=0, z=0))}]),
+            ]),
+            font=dict(color="#00FFCC", size=11, family="Arial"),
+            bgcolor="rgba(20, 0, 40, 0.8)",
+            bordercolor="#B066FF",
+            borderwidth=1
+        )
+    ]
+)
+st.plotly_chart(fig_3d, use_container_width=True)
+
+st.markdown("---")
+
+col1, col2 = st.columns([1, 1], gap="large")
 
 with col1:
     st.markdown("### ⚠️ Primary Diagnostic Readout")
@@ -280,7 +414,10 @@ with col1:
             
             df_probs = pd.DataFrame({'Disease String': top_4_diseases, 'Confidence %': top_4_probs})
             fig_bar = px.bar(df_probs, x='Confidence %', y='Disease String', orientation='h', color='Confidence %', 
-                             color_continuous_scale='Reds' if st.session_state.pred_label != "Healthy" else 'Greens')
+                             color_continuous_scale='Reds' if st.session_state.pred_label != "Healthy" else 'Greens',
+                             range_x=[0, 100])
+            fig_bar.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'), height=250, margin=dict(l=0, r=0, t=0, b=0))
+            st.plotly_chart(fig_bar, use_container_width=True)
             fig_bar.update_layout(yaxis={'categoryorder':'total ascending'}, margin=dict(t=0, b=0, l=0, r=0), 
                                   height=220, coloraxis_showscale=False, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
             st.plotly_chart(fig_bar, use_container_width=True)
@@ -291,66 +428,13 @@ with col1:
     # The big isolated button leading to the Detailed Analytics page
     if st.button("📊 VIEW FULL ANALYTICS & INSIGHTS REPORT", use_container_width=True, type="secondary"):
         st.switch_page("pages/1_📊_Detailed_Report.py")
+        
+    st.markdown("### 🧬 Quantum Circuit Architecture")
+    try:
+        st.image("quantum_circuit.png", caption="5-Qubit Angle Embedding Circuit", use_container_width=True)
+    except:
+        pass
 
 
 with col2:
-    st.markdown("### 🌐 Navigable Holographic Projection")
-    st.caption("A completely clean 3D render of the 27-state multi-disease boundary arrays.")
-    
-    if not st.session_state.prediction_run:
-        # Just show the base diseases without patient
-        df_3d = pd.DataFrame({
-            'Phase X': X_train[:, 0], 'Phase Y': X_train[:, 1], 'Phase Z': X_train[:, 2],
-            'Class Mapping': le.inverse_transform(y_train)
-        })
-        patient_x, patient_y, patient_z = None, None, None
-    else:
-        df_3d = pd.DataFrame({
-            'Phase X': X_train[:, 0], 'Phase Y': X_train[:, 1], 'Phase Z': X_train[:, 2],
-            'Class Mapping': le.inverse_transform(y_train)
-        })
-        patient_x = st.session_state.X_input_pca[0, 0]
-        patient_y = st.session_state.X_input_pca[0, 1]
-        patient_z = st.session_state.X_input_pca[0, 2]
-
-    # Clean HD Hologram Plot
-    fig_3d = go.Figure()
-    classes = df_3d['Class Mapping'].unique()
-    import plotly.colors as pcolors
-    colors = pcolors.qualitative.Dark24
-    
-    for i, cls in enumerate(classes):
-        cls_data = df_3d[df_3d['Class Mapping'] == cls]
-        fig_3d.add_trace(go.Scatter3d(
-            x=cls_data['Phase X'], y=cls_data['Phase Y'], z=cls_data['Phase Z'],
-            mode='markers',
-            marker=dict(size=3, color=colors[i % len(colors)], opacity=0.15, line=dict(width=0)),
-            name=str(cls), showlegend=False,
-            hoverinfo='text', text=cls_data['Class Mapping']
-        ))
-        
-    if patient_x is not None:
-        fig_3d.add_trace(go.Scatter3d(
-            x=[patient_x], y=[patient_y], z=[patient_z],
-            mode='markers+text',
-            marker=dict(size=20, color='#00FFCC', symbol='diamond', line=dict(width=3, color='white'), opacity=1.0),
-            name='SUBJECT', text=['⭐ TARGET ANOMALY'], textposition="top center",
-            textfont=dict(color='#00FFCC', size=18, family="Arial Black"), showlegend=False, hoverinfo='text'
-        ))
-    
-    fig_3d.update_layout(
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        scene=dict(
-            xaxis=dict(showgrid=False, zeroline=False, showbackground=False, showticklabels=False, title=''),
-            yaxis=dict(showgrid=False, zeroline=False, showbackground=False, showticklabels=False, title=''),
-            zaxis=dict(showgrid=False, zeroline=False, showbackground=False, showticklabels=False, title='')
-        ),
-        margin=dict(t=0, b=0, l=0, r=0), height=550,
-        scene_camera=dict(
-            up=dict(x=0, y=0, z=1),
-            center=dict(x=0, y=0, z=0),
-            eye=dict(x=1.1, y=1.1, z=1.1)
-        )
-    )
-    st.plotly_chart(fig_3d, use_container_width=True)
+    st.empty()

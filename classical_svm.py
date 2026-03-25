@@ -4,6 +4,8 @@ import numpy as np
 import os
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.decomposition import PCA
 from sklearn.metrics import accuracy_score, classification_report
@@ -56,12 +58,27 @@ def main():
     svm.fit(X_train, y_train)
     y_pred = svm.predict(X_test)
     
-    print(f"Classical Accuracy: {accuracy_score(y_test, y_pred):.4f}")
+    rf = RandomForestClassifier(n_estimators=100, random_state=42)
+    rf.fit(X_train, y_train)
+    y_pred_rf = rf.predict(X_test)
+
+    xgb = XGBClassifier(use_label_encoder=False, eval_metric='mlogloss', random_state=42)
+    xgb.fit(X_train, y_train)
+    y_pred_xgb = xgb.predict(X_test)
+
+    print(f"Classical SVM Accuracy: {accuracy_score(y_test, y_pred):.4f}")
+    print(f"Random Forest Accuracy: {accuracy_score(y_test, y_pred_rf):.4f}")
+    print(f"XGBoost Accuracy:       {accuracy_score(y_test, y_pred_xgb):.4f}")
     print(f"Total evaluated classes: {len(le.classes_)}")
 
     joblib.dump(svm, 'classical_svm_model.pkl')
+    joblib.dump(rf, 'classical_rf_model.pkl')
+    joblib.dump(xgb, 'classical_xgb_model.pkl')
+    
     np.save('y_test_classical.npy', y_test)
     np.save('y_pred_classical.npy', y_pred)
+    np.save('y_pred_rf.npy', y_pred_rf)
+    np.save('y_pred_xgb.npy', y_pred_xgb)
 
 if __name__ == '__main__':
     main()

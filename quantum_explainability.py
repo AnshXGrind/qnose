@@ -130,11 +130,24 @@ def main():
 
     avg_gradient = np.mean(gradients, axis=0)
 
-    plt.figure(figsize=(7, 4))
-    pca_labels = [f"PCA {i+1}" for i in range(5)]
-    plt.bar(pca_labels, avg_gradient, color='#4B0082', alpha=0.8)
-    plt.title('Quantum Circuit Parameter Sensitivity (Feature Importance)')
-    plt.ylabel('Mean Absolute Gradient')
+    # Map back to original features using PCA components
+    pca = joblib.load('pca.pkl')
+    # pca.components_ shape is (n_components, n_features) (5, 21)
+    # The gradient is wrt the 5 PCA features.
+    # By chain rule: df/dx_orig = (df/dx_pca) * (dx_pca/dx_orig) = avg_gradient @ pca.components_
+    orig_gradient = np.abs(np.dot(avg_gradient, pca.components_))
+    
+    feature_cols = joblib.load('feature_cols.pkl')
+    
+    # Sort and plot top 10 original features
+    sorted_idx = np.argsort(orig_gradient)[::-1][:10]
+    top_features = [feature_cols[i] for i in sorted_idx]
+    top_grads = orig_gradient[sorted_idx]
+
+    plt.figure(figsize=(10, 6))
+    plt.barh(top_features[::-1], top_grads[::-1], color='#4B0082', alpha=0.8)
+    plt.title('Top 10 Biomarkers (Mapped from Quantum Gradients)')
+    plt.xlabel('Mean Absolute Gradient Impact')
     plt.tight_layout()
     plt.savefig('quantum_feature_importance.png')
     plt.close()
