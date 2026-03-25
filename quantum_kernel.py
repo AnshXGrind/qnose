@@ -29,7 +29,7 @@ TRAIN_SAMPLE_SIZE = 500  # training subset size for kernel matrix
 TEST_SAMPLE_SIZE = 100  # test subset size for evaluation
 
 
-def get_lightning_device() -> qml.Device:
+def get_lightning_device():
     """Return a PennyLane lightning.qubit device with N_QUBITS wires."""
 
     return qml.device("lightning.qubit", wires=N_QUBITS)

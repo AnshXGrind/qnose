@@ -313,7 +313,7 @@ N_QUBITS = 5
 
 
 @st.cache_resource
-def get_quantum_device() -> qml.Device:
+def get_quantum_device():
     """Return a cached default.qubit device for dashboard inference."""
 
     return qml.device("default.qubit", wires=N_QUBITS)
@@ -374,7 +374,13 @@ if predict_button or stress_test_button:
     pred_idx = qsvm.predict(K_pred)[0]
     st.session_state.pred_label = le.inverse_transform([pred_idx])[0]
     
-    if hasattr(qsvm, "predict_proba"):
+    if hasattr(qsvm, "decision_function"):
+        df = qsvm.decision_function(K_pred)[0]
+        # Temperature-scaled softmax for better confidence spread (Platt scaling fails on small multiclass chunks)
+        temp = 3.0
+        exp_df = np.exp((df - np.max(df)) / temp)
+        st.session_state.prob_dist = exp_df / np.sum(exp_df)
+    elif hasattr(qsvm, "predict_proba"):
         st.session_state.prob_dist = qsvm.predict_proba(K_pred)[0]
         
     st.session_state.prediction_run = True
