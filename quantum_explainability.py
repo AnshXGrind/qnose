@@ -105,10 +105,23 @@ def main():
     n_qubits = 5
     dev = qml.device("default.qubit", wires=n_qubits)
 
+    def entangling_feature_map(x):
+        for i in range(n_qubits):
+            qml.RY(x[i], wires=i)
+        
+        qml.CNOT(wires=[0, 1])
+        qml.CNOT(wires=[1, 2])
+        qml.CNOT(wires=[2, 3])
+        qml.CNOT(wires=[3, 4])
+        qml.CNOT(wires=[4, 0])
+        
+        for i in range(n_qubits):
+            qml.RY(x[i], wires=i)
+
     @qml.qnode(dev, interface="autograd")
     def kernel_circuit(x1, x2):
-        qml.AngleEmbedding(x1, wires=range(n_qubits))
-        qml.adjoint(qml.AngleEmbedding)(x2, wires=range(n_qubits))
+        entangling_feature_map(x1)
+        qml.adjoint(entangling_feature_map)(x2)
         return qml.probs(wires=range(n_qubits))
 
     def kernel_val(x1, x2):

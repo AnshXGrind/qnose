@@ -2,7 +2,7 @@
 
 """Train the Quantum SVM kernel model on the multi-disease VOC dataset.
 
-This module constructs a 5-qubit AngleEmbedding-based quantum kernel using
+This module constructs a 5-qubit entangling quantum kernel using
 PennyLane's ``lightning.qubit`` device, trains an SVM with a precomputed
 kernel over 27 disease classes, and saves all quantum-specific artifacts for
 use in the Streamlit dashboard and analysis scripts.
@@ -38,17 +38,33 @@ def get_lightning_device():
 DEV = get_lightning_device()
 
 
+def entangling_feature_map(x: np.ndarray) -> None:
+    """Hardware-efficient entangling feature map matching reference circuit."""
+    for i in range(N_QUBITS):
+        qml.RY(x[i], wires=i)
+    
+    # Ring topology entanglement
+    qml.CNOT(wires=[0, 1])
+    qml.CNOT(wires=[1, 2])
+    qml.CNOT(wires=[2, 3])
+    qml.CNOT(wires=[3, 4])
+    qml.CNOT(wires=[4, 0])
+    
+    # Second layer of data re-uploading
+    for i in range(N_QUBITS):
+        qml.RY(x[i], wires=i)
+
 @qml.qnode(DEV)
 def kernel_circuit(x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
     """Quantum kernel circuit returning the full probability distribution.
 
     The kernel value k(x1, x2) is taken as the probability of the |0...0>
     computational basis state after preparing |ψ(x1)> and applying the adjoint
-    of the embedding for x2.
+    of the feature map for x2.
     """
 
-    qml.AngleEmbedding(x1, wires=range(N_QUBITS))
-    qml.adjoint(qml.AngleEmbedding)(x2, wires=range(N_QUBITS))
+    entangling_feature_map(x1)
+    qml.adjoint(entangling_feature_map)(x2)
     return qml.probs(wires=range(N_QUBITS))
 
 

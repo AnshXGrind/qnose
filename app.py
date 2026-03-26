@@ -89,37 +89,97 @@ def log_telemetry(action, details):
 
 st.markdown("""
 <style>
-    /* Clean minimal background */
+    /* Clean minimal background - Modern Deep Space / Teal theme */
+    .stApp {
+        background: radial-gradient(circle at top right, #0B192C, #020617);
+        color: #F8FAFC;
+    }
+    
     .reportview-container .main .block-container { padding-top: 1rem; padding-bottom: 2rem; }
     
-    /* Animated Hero Section - Fixed CSS */
+    /* Animated Hero Section */
     .hero {
-        background: linear-gradient(-45deg, #150020, #0a1128, #18002a, #001219);
-        background-size: 400% 400%;
-        animation: gradientBG 15s ease infinite;
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.4));
+        backdrop-filter: blur(12px);
         padding: 3rem 2rem;
-        border-radius: 15px;
+        border-radius: 16px;
         margin-bottom: 2rem;
         text-align: center;
-        border: 1px solid rgba(0, 255, 204, 0.1);
-        box-shadow: 0 0 20px rgba(0, 255, 204, 0.05);
+        border: 1px solid rgba(56, 189, 248, 0.2);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(56, 189, 248, 0.05);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
-    @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+    .hero:hover { 
+        transform: translateY(-4px) scale(1.01); 
+        box-shadow: 0 15px 50px rgba(0, 0, 0, 0.5), inset 0 0 30px rgba(56, 189, 248, 0.1);
+        border: 1px solid rgba(56, 189, 248, 0.4);
+    }
+    
     .hero h1 span {
-        font-size: 3rem !important;
+        font-size: 3.2rem !important;
         font-weight: 800;
         margin-bottom: 0.5rem;
-        color: #00ffcc;
-        text-shadow: 0 0 10px rgba(0, 255, 204, 0.5), 0 0 20px rgba(176, 102, 255, 0.5);
+        background: linear-gradient(to right, #38BDF8, #818CF8, #C084FC);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: textGlow 3s ease-in-out infinite alternate;
     }
-    .hero p { font-size: 1.2rem; color: #b3c0d1; max-width: 800px; margin: 0 auto; }
+    @keyframes textGlow { 
+        from { filter: drop-shadow(0 0 8px rgba(56,189,248,0.4)); } 
+        to { filter: drop-shadow(0 0 16px rgba(129,140,248,0.7)); } 
+    }
+    
+    .hero p { font-size: 1.25rem; color: #94A3B8; max-width: 800px; margin: 0 auto; line-height: 1.6; }
 
-    /* Pulsing Alerts */
-    @keyframes pulse-red { 0% { box-shadow: 0 0 15px rgba(255, 75, 75, 0.6); border-color: #ff4b4b; } 50% { box-shadow: 0 0 35px rgba(255, 75, 75, 1.0); border-color: #ff8080; } 100% { box-shadow: 0 0 15px rgba(255, 75, 75, 0.6); border-color: #ff4b4b; } }
-    @keyframes pulse-green { 0% { box-shadow: 0 0 15px rgba(0, 255, 128, 0.6); border-color: #00ff80; } 50% { box-shadow: 0 0 35px rgba(0, 255, 128, 1.0); border-color: #80ffc0; } 100% { box-shadow: 0 0 15px rgba(0, 255, 128, 0.6); border-color: #00ff80; } }
-    .alert-glow { animation: pulse-red 1.5s infinite; border-radius: 12px; padding: 20px; text-align: center; background: rgba(40, 0, 0, 0.4); margin-top: 1rem; }
-    .safe-glow { animation: pulse-green 2.5s infinite; border-radius: 12px; padding: 20px; text-align: center; background: rgba(0, 40, 0, 0.4); margin-top: 1rem; }
-    .hw-error { color: #ff4b4b; font-weight: bold; background-color: rgba(255, 75, 75, 0.1); padding: 12px; border-radius: 8px; border: 1px solid #ff4b4b; text-align: center; margin-top: 15px; margin-bottom: 15px; font-size: 0.95rem; }
+    /* Modern Glassmorphism Cards */
+    .glass-card {
+        background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9)); 
+        border: 1px solid rgba(56, 189, 248, 0.2); 
+        border-radius: 16px; 
+        padding: 1.8rem;
+        box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+    }
+    .glass-card:hover { 
+        transform: translateY(-6px); 
+        box-shadow: 0 12px 30px 0 rgba(56, 189, 248, 0.15); 
+        border: 1px solid rgba(56, 189, 248, 0.5);
+    }
+
+    /* Elegant Pulsing Alerts */
+    @keyframes pulse-red { 
+        0% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); border-color: rgba(239, 68, 68, 0.5); background: rgba(127, 29, 29, 0.2); } 
+        50% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.8); border-color: rgba(239, 68, 68, 1); background: rgba(127, 29, 29, 0.4); } 
+        100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); border-color: rgba(239, 68, 68, 0.5); background: rgba(127, 29, 29, 0.2); } 
+    }
+    @keyframes pulse-green { 
+        0% { box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); border-color: rgba(16, 185, 129, 0.5); background: rgba(6, 78, 59, 0.2); } 
+        50% { box-shadow: 0 0 25px rgba(16, 185, 129, 0.8); border-color: rgba(16, 185, 129, 1); background: rgba(6, 78, 59, 0.4); } 
+        100% { box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); border-color: rgba(16, 185, 129, 0.5); background: rgba(6, 78, 59, 0.2); } 
+    }
+    
+    .alert-glow { animation: pulse-red 2.2s infinite; border-radius: 12px; padding: 25px; text-align: center; margin-top: 1rem; color: #F8FAFC; border: 1px solid; }
+    .safe-glow { animation: pulse-green 2.8s infinite; border-radius: 12px; padding: 25px; text-align: center; margin-top: 1rem; color: #F8FAFC; border: 1px solid; }
+    .hw-error { color: #EF4444; font-weight: bold; background-color: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 10px; border: 1px solid #EF4444; text-align: center; margin-top: 15px; margin-bottom: 15px; font-size: 0.95rem; animation: textFade 2s infinite; }
+    
+    @keyframes textFade { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+    
+    /* Modern Spinning Loader */
+    .loader {
+        border: 4px solid rgba(56, 189, 248, 0.1);
+        border-top: 4px solid #38BDF8;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        display: inline-block;
+        vertical-align: middle;
+        margin-right: 10px;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
     #MainMenu {visibility: hidden;} footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
@@ -322,10 +382,27 @@ def get_quantum_device():
 _DEV = get_quantum_device()
 
 
+def entangling_feature_map(x):
+    """Hardware-efficient entangling feature map matching reference circuit."""
+    for i in range(N_QUBITS):
+        qml.RY(x[i], wires=i)
+    
+    # Ring topology entanglement
+    qml.CNOT(wires=[0, 1])
+    qml.CNOT(wires=[1, 2])
+    qml.CNOT(wires=[2, 3])
+    qml.CNOT(wires=[3, 4])
+    qml.CNOT(wires=[4, 0])
+    
+    # Second layer of data re-uploading
+    for i in range(N_QUBITS):
+        qml.RY(x[i], wires=i)
+
+
 @qml.qnode(_DEV)
 def kernel_circuit(x1, x2):
-    qml.AngleEmbedding(x1, wires=range(N_QUBITS))
-    qml.adjoint(qml.AngleEmbedding)(x2, wires=range(N_QUBITS))
+    entangling_feature_map(x1)
+    qml.adjoint(entangling_feature_map)(x2)
     return qml.probs(wires=range(N_QUBITS))
 
 
@@ -356,23 +433,25 @@ if predict_button or stress_test_button:
     # Check cache
     input_hash = hashlib.md5(X_input_pca.tobytes()).hexdigest()
     
-    if input_hash in st.session_state.pred_cache:
-        K_pred = st.session_state.pred_cache[input_hash]
-    else:
-        # Animated processing
-        K_pred = np.zeros((1, len(X_train)))
-        progress_text = "⚛️ Computing Quantum Kernel Correlations (Iterative)..."
-        prog_bar = st.progress(0, text=progress_text)
-        
-        for i, x_train in enumerate(X_train):
-            K_pred[0, i] = kernel_function(X_input_pca[0], x_train)
-            if i % max(1, len(X_train)//20) == 0:
-                prog_bar.progress((i + 1) / len(X_train), text=progress_text)
-        prog_bar.empty()
-        st.session_state.pred_cache[input_hash] = K_pred
-        
-    pred_idx = qsvm.predict(K_pred)[0]
-    st.session_state.pred_label = le.inverse_transform([pred_idx])[0]
+    with st.spinner("⚛️ Initializing Quantum Subspace Engine..."):
+        if input_hash in st.session_state.pred_cache:
+            K_pred = st.session_state.pred_cache[input_hash]
+            time.sleep(0.5) # Add slight synthetic delay for UX animation
+        else:
+            # Animated processing
+            K_pred = np.zeros((1, len(X_train)))
+            progress_text = "⚛️ Intersecting Latent Manifold with 5-Qubit Tensor Map..."
+            prog_bar = st.progress(0, text=progress_text)
+            
+            for i, x_train in enumerate(X_train):
+                K_pred[0, i] = kernel_function(X_input_pca[0], x_train)
+                if i % max(1, len(X_train)//20) == 0:
+                    prog_bar.progress((i + 1) / len(X_train), text=progress_text)
+            prog_bar.empty()
+            st.session_state.pred_cache[input_hash] = K_pred
+            
+        pred_idx = qsvm.predict(K_pred)[0]
+        st.session_state.pred_label = le.inverse_transform([pred_idx])[0]
     
     if hasattr(qsvm, "decision_function"):
         df = qsvm.decision_function(K_pred)[0]
@@ -398,6 +477,7 @@ if predict_button or stress_test_button:
 col1, col2 = st.columns([1, 1.2], gap="large")
 
 with col1:
+    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
     st.markdown("### ⚠️ Primary Diagnostic Readout")
 
 
@@ -405,9 +485,9 @@ with col1:
         st.info("System on standby. Validate parameters in sidebar and deploy sequence.")
     else:
         if st.session_state.pred_label != "Healthy":
-            st.markdown(f'<div class="alert-glow"><h3>🚨 {st.session_state.pred_label} Signature</h3><p>High degree of structural anomaly detected.</p></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="alert-glow"><h2>🚨 {st.session_state.pred_label} Signature</h2><p>High degree of structural anomaly detected. Immediate review required.</p></div>', unsafe_allow_html=True)
         else:
-            st.markdown('<div class="safe-glow"><h3>✅ Zero-Defect Baseline</h3><p>Patient coordinates align perfectly with healthy topological matrix.</p></div>', unsafe_allow_html=True)
+            st.markdown('<div class="safe-glow"><h2>✅ Zero-Defect Baseline</h2><p>Patient coordinates align perfectly with healthy topological matrix.</p></div>', unsafe_allow_html=True)
             
         st.markdown("<br>", unsafe_allow_html=True)
         
@@ -425,6 +505,8 @@ with col1:
             fig_bar.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'), height=250, margin=dict(l=0, r=0, t=0, b=0), yaxis={'categoryorder':'total ascending'}, coloraxis_showscale=False)
             st.plotly_chart(fig_bar, use_container_width=True)
             st.session_state.top_probs = df_probs
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("📊 VIEW FULL ANALYTICS & INSIGHTS REPORT", use_container_width=True, type="secondary"):
@@ -447,6 +529,7 @@ with col1:
         st.error(f"Live graphics rendering failed: {e}")
 
 with col2:
+    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
     if st.session_state.prediction_run:
         st.markdown("### 🕸️ VOC Deviation Radar (Live)")
         radar_df = pd.DataFrame({
@@ -526,3 +609,4 @@ with col2:
         legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01, bgcolor="rgba(0,0,0,0.5)", font=dict(color="white", size=10), itemsizing='constant', traceorder='normal')
     )
     st.plotly_chart(fig_3d, use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)

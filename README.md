@@ -48,7 +48,7 @@ Raw VOC CSV (VOC_MultiDisease_Dataset.csv)
   5-D PCA vector x               5-D PCA vector x
           |                                |
           v                                v
-  AngleEmbedding(5 qubits)        SVM / Random Forest / XGBoost
+  Entangling Feature Map          SVM / Random Forest / XGBoost
           |
           v
    |ψ(x)⟩ on 5-qubit device
@@ -76,7 +76,7 @@ Raw VOC CSV (VOC_MultiDisease_Dataset.csv)
 
 ## Features
 
-- **Quantum SVM classifier (QSVM)** – 5‑qubit AngleEmbedding kernel trained on the PCA‑compressed VOC space for 27‑class disease prediction.
+- **Quantum SVM classifier (QSVM)** – 5‑qubit hardware-efficient entangling kernel trained on the PCA‑compressed VOC space for 27‑class disease prediction.
 - **Classical baselines (SVM / RF / XGBoost)** – Strong classical reference models on the same features for fair, side‑by‑side comparison.
 - **Live 3D PCA hologram** – Interactive Plotly 3D scatter plot showing the patient’s location relative to all training samples in PCA space.
 - **SHAP explainability for classical SVM** – Kernel SHAP waterfall plot explaining why a particular sample was classified as a given disease.
